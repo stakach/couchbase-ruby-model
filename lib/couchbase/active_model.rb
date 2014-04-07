@@ -9,6 +9,37 @@ module Couchbase
         include ::ActiveModel::Validations
         include ::ActiveModel::Validations::Callbacks
         include ::ActiveModel::Dirty
+        include ::ActiveModel::Serializers::JSON
+
+
+        # Overrides the default active model serializable_hash as it makes the assumption that
+        # attributes.keys are strings and we need to include the model id
+        def serializable_hash(options = nil)
+          options ||= {}
+
+          attribute_names = attributes.keys << :id
+          if only = options[:only]
+            attribute_names &= Array(only).map(&:to_sym)
+          elsif except = options[:except]
+            attribute_names -= Array(except).map(&:to_sym)
+          end
+
+          hash = {}
+          attribute_names.each { |n| hash[n] = read_attribute_for_serialization(n) }
+
+          Array(options[:methods]).each { |m| hash[m.to_s] = send(m) if respond_to?(m) }
+
+          serializable_add_includes(options) do |association, records, opts|
+            hash[association.to_s] = if records.respond_to?(:to_ary)
+              records.to_ary.map { |a| a.serializable_hash(opts) }
+            else
+              records.serializable_hash(opts)
+            end
+          end
+
+          hash
+        end
+
 
         define_model_callbacks :create, :update, :delete, :save, :initialize
         [:save, :create, :update, :delete, :initialize].each do |meth|
