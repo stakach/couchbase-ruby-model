@@ -388,10 +388,14 @@ module Couchbase
     #  Beer.find("heineken").brewery.name
     def self.belongs_to(name, options = {})
       ref = "#{name}_id"
+      ref_ass = "#{ref}="
       attribute(ref)
       assoc = (options[:class_name] || name).to_s.camelize.constantize
       define_method(name) do
         assoc.find(self.send(ref))
+      end
+      define_method("#{name}=") do |model|
+        self.send(ref_ass, model.id)
       end
     end
 
