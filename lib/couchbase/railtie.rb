@@ -17,6 +17,7 @@
 # limitations under the License.
 #
 
+require 'yaml'
 require 'couchbase/model'
 
 module Rails #:nodoc:
