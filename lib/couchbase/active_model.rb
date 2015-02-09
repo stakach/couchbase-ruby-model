@@ -41,8 +41,8 @@ module Couchbase
         end
 
 
-        define_model_callbacks :create, :update, :delete, :save, :initialize
-        [:save, :create, :update, :delete, :initialize].each do |meth|
+        define_model_callbacks :create, :update, :delete, :destroy, :save, :initialize
+        [:save, :create, :update, :delete, :destroy, :initialize].each do |meth|
           class_eval <<-EOC
             alias #{meth}_without_callbacks #{meth}
             def #{meth}(*args, &block)

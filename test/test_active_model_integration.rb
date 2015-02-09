@@ -70,7 +70,8 @@ class TestActiveModelIntegration < MiniTest::Unit::TestCase
       :after_initialize, :before_create, :around_create,
       :after_create, :before_delete, :around_delete,
       :after_delete, :before_save, :around_save, :after_save,
-      :before_update, :around_update, :after_update
+      :before_update, :around_update, :after_update,
+      :before_destroy, :around_destroy, :after_destroy
     ].each do |callback|
       assert ActiveObj.respond_to?(callback), "Model doesn't support callback: #{callback}"
     end
@@ -125,7 +126,7 @@ class TestActiveModelIntegration < MiniTest::Unit::TestCase
     tester = ActiveUser.create(:email => 'joe@example.com', :role => 'admin')
     tester.email = 'bob@example.com'
     assert tester.changed?
-    assert_equal tester.changed, [:email]
+    assert_equal tester.changed, ["email"]
   end
 
   def test_dirty_tracking_reset_on_save

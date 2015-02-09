@@ -220,7 +220,7 @@ module Couchbase
     #   |  |  `- reduce.js
     #
     # The directory structure above demonstrate layout for design document
-    # with id +_design/link+ and three views: +by_create_at+,
+    # with id +_design/link+ and three views: +by_created_at+,
     # +by_session_id` and `total_views`.
     def self.ensure_design_document!
       unless Configuration.design_documents_paths
@@ -391,8 +391,24 @@ module Couchbase
       ref_ass = "#{ref}="
       attribute(ref)
       assoc = (options[:class_name] || name).to_s.camelize.constantize
+
+      # Define reader
       define_method(name) do
-        assoc.find(self.send(ref))
+        begin
+          assoc.find(self.send(ref))
+        rescue Couchbase::Error::NotFound
+        end
+      end
+      # Define writer
+      attr_writer name
+      define_method(:"#{name}=") do |value|
+        if value
+          self.send("#{ref}=", value.id)
+        else
+          self.send("#{ref}=", nil)
+        end
+
+        instance_variable_set("@#{name}", value)
       end
       define_method("#{name}=") do |model|
         self.send(ref_ass, model.id)
@@ -403,7 +419,9 @@ module Couchbase
       def _find(quiet, *ids)
         wants_array = ids.first.kind_of?(Array)
         ids = ids.flatten.compact.uniq
-        unless ids.empty?
+        if ids.empty?
+          raise Couchbase::Error::NotFound unless quiet
+        else
           res = bucket.get(ids, :quiet => quiet, :extended => true).map do |id, (obj, flags, cas)|
             obj = {:raw => obj} unless obj.is_a?(Hash)
             new({:id => id, :meta => {'flags' => flags, 'cas' => cas}}.merge(obj))

@@ -182,6 +182,12 @@ class TestModel < MiniTest::Unit::TestCase
     end
   end
 
+  def test_it_raises_not_found_exception_if_id_is_nil
+    assert_raises Couchbase::Error::NotFound do
+      Post.find(nil)
+    end
+  end
+
   def test_it_returns_nil_when_key_not_found
      refute Post.find_by_id('missing_key')
   end
@@ -244,6 +250,14 @@ class TestModel < MiniTest::Unit::TestCase
     end
   end
 
+  def test_destroy_an_existing_model
+    post = Post.create(:id => uniq_id)
+    assert post.destroy
+    assert_raises Couchbase::Error::NotFound do
+      Post.bucket.get(uniq_id)
+    end
+  end
+
   def test_belongs_to_with_class_name_assoc
     brewery = Brewery.create(:name => "R Wines")
     assert_includes Wine.attributes.keys, :winery_id
@@ -270,6 +284,19 @@ class TestModel < MiniTest::Unit::TestCase
     assoc = beer.brewery
     assert_instance_of Brewery, assoc
     assert_equal 'Anheuser-Busch', assoc.name
+  end
+
+  def test_belongs_to_assoc_assign
+    brewery = Brewery.create(:name => 'Anheuser-Busch')
+    beer = Beer.create(:name => 'Budweiser')
+    beer.brewery = brewery
+
+    assert_equal brewery.id, beer.brewery_id
+    assert_equal brewery, beer.brewery
+
+    beer.brewery = nil
+    assert_nil beer.brewery
+    assert_nil beer.brewery_id
   end
 
   def test_to_key
