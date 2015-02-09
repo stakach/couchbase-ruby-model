@@ -387,31 +387,34 @@ module Couchbase
     #
     #  Beer.find("heineken").brewery.name
     def self.belongs_to(name, options = {})
-      ref = "#{name}_id"
-      ref_ass = "#{ref}="
+      ref = :"#{name}_id"
+      ref_ass = :"#{ref}="
+      instance_var = :"@#{name}"
       attribute(ref)
       assoc = (options[:class_name] || name).to_s.camelize.constantize
 
       # Define reader
       define_method(name) do
+        return instance_variable_get(instance_var) if instance_variable_defined?(instance_var)
         begin
-          assoc.find(self.send(ref))
+          val = assoc.find(self.send(ref))
+          instance_variable_set(instance_var, val)
+          val
         rescue Couchbase::Error::NotFound
+          instance_variable_set(instance_var, nil)
+          nil
         end
       end
       # Define writer
       attr_writer name
       define_method(:"#{name}=") do |value|
         if value
-          self.send("#{ref}=", value.id)
+          self.send(ref_ass, value.id)
         else
-          self.send("#{ref}=", nil)
+          self.send(ref_ass, nil)
         end
 
-        instance_variable_set("@#{name}", value)
-      end
-      define_method("#{name}=") do |model|
-        self.send(ref_ass, model.id)
+        instance_variable_set(instance_var, value)
       end
     end
 
